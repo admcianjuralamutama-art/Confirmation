@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Data Transfer Toko</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f9;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+    }
+    .controls div {
+      margin: 5px 0;
+    }
+    input[type="text"] {
+      padding: 8px;
+      width: 200px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      padding: 8px 12px;
+      background: #007bff;
+      border: none;
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-left: 5px;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    select {
+      padding: 6px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    th, td {
+      padding: 10px;
+      border: 1px solid #ddd;
+      text-align: left;
+    }
+    th {
+      background: #007bff;
+      color: #fff;
+    }
+    tr:nth-child(even) {
+      background: #f9f9f9;
+    }
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>Data Transfer Toko</h1>
+  <div class="controls">
+    <div>
+      <input type="text" id="searchInput" placeholder="Cari Nama Toko / Nominal">
+      <button onclick="searchData()">Cari</button>
+      <button class="hidden" id="backButton" onclick="showAll()">Kembali</button>
+    </div>
+    <div>
+      Auto-refresh: 
+      <select id="refreshInterval" onchange="changeInterval()">
+        <option value="30000">30 detik</option>
+        <option value="60000">60 detik</option>
+      </select>
+    </div>
+  </div>
+
+  <table id="data-table">
+    <thead>
+      <tr>
+        <th>Tanggal Transfer</th>
+        <th>Nama Sales</th>
+        <th>Bank</th>
+        <th>Jumlah Transfer</th>
+        <th>Nama Toko</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    // Ganti link CSV dengan hasil Publish to web Google Sheet
+    const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSY_v21_qVcE_xUd3gPgxDO7MS1kfuAb2WC1ZBSOE4NhXOHQjqj4YWpqyVGUtQF7xm22q4V_CDeJtxu/pub?output=csv";
+
+    let allData = [];
+    let refreshTimer;
+
+    function parseCSV(text) {
+      const rows = [];
+      let currentRow = [];
+      let currentValue = "";
+      let insideQuotes = false;
+
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        if (char === '"' && text[i + 1] === '"') {
+          currentValue += '"';
+          i++;
+        } else if (char === '"') {
+          insideQuotes = !insideQuotes;
+        } else if (char === ',' && !insideQuotes) {
+          currentRow.push(currentValue.trim());
+          currentValue = "";
+        } else if ((char === '\n' || char === '\r') && !insideQuotes) {
+          if (currentValue || currentRow.length > 0) {
+            currentRow.push(currentValue.trim());
+            rows.push(currentRow);
+          }
+          currentRow = [];
+          currentValue = "";
+        } else {
+          currentValue += char;
+        }
+      }
+      if (currentValue || currentRow.length > 0) {
+        currentRow.push(currentValue.trim());
+        rows.push(currentRow);
+      }
+      return rows;
+    }
+
+    async function loadData() {
+      const response = await fetch(csvUrl + "&_=" + new Date().getTime());
+      const csvText = await response.text();
+      const rows = parseCSV(csvText);
+
+      allData = [];
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row[1]) continue; // skip baris kosong
+        allData.push({
+          tanggalTransfer: row[1] ? row[1].trim() : '',
+          namaSales: row[2] ? row[2].trim() : '',
+          bank: row[3] ? row[3].trim() : '',
+          jumlahTransfer: row[5] ? row[5].trim() : '',
+          namaToko: row[6] ? row[6].trim() : '',
+          status: row[7] ? row[7].trim() : ''
+        });
+      }
+      renderTable(allData);
+    }
+
+    function formatNumber(value) {
+      if (!value) return '';
+      const cleaned = value.toString().replace(/\./g, '').replace(/,/g, '');
+      const number = parseFloat(cleaned);
+      if (isNaN(number)) return value;
+      return number.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    }
+
+    function renderTable(data) {
+      const tbody = document.querySelector("#data-table tbody");
+      tbody.innerHTML = "";
+      data.forEach(item => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${item.tanggalTransfer}</td>
+          <td>${item.namaSales}</td>
+          <td>${item.bank}</td>
+          <td>${formatNumber(item.jumlahTransfer)}</td>
+          <td>${item.namaToko}</td>
+          <td>${item.status}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function searchData() {
+      const keyword = document.getElementById("searchInput").value.toLowerCase();
+      if (!keyword) return;
+
+      const filtered = allData.filter(item =>
+        item.namaToko.toLowerCase().includes(keyword) ||
+        item.jumlahTransfer.toLowerCase().includes(keyword)
+      );
+
+      renderTable(filtered);
+      document.getElementById("backButton").classList.remove("hidden");
+      clearInterval(refreshTimer);
+    }
+
+    function showAll() {
+      renderTable(allData);
+      document.getElementById("searchInput").value = "";
+      document.getElementById("backButton").classList.add("hidden");
+      changeInterval();
+    }
+
+    function changeInterval() {
+      clearInterval(refreshTimer);
+      const interval = document.getElementById("refreshInterval").value;
+      refreshTimer = setInterval(loadData, interval);
+    }
+
+    loadData();
+    changeInterval();
+  </script>
+</body>
+</html>
