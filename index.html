@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <title>Data Transfer Toko</title>
+  <title>MONITORING DATA TRANSFER</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -11,7 +11,8 @@
     }
     h1 {
       text-align: center;
-      color: #333;
+      color: #007bff;
+      letter-spacing: 1px;
     }
     .controls {
       display: flex;
@@ -82,7 +83,7 @@
   </style>
 </head>
 <body>
-  <h1>Data Transfer Toko</h1>
+  <h1>MONITORING DATA TRANSFER</h1>
   <div class="controls">
     <div>
       <input type="text" id="searchInput" placeholder="Cari Nama Toko / Sales / Nominal">
@@ -165,77 +166,4 @@
         allData.push({
           tanggalTransfer: row[1]?.trim() || '',
           namaSales: row[2]?.trim() || '',
-          bank: row[3]?.trim() || '',
-          jumlahTransfer: row[5]?.trim() || '',
-          namaToko: row[6]?.trim() || '',
-          status: row[7]?.trim() || ''
-        });
-      }
-      renderTable(allData);
-    }
-
-    function formatNumber(value) {
-      if (!value) return '';
-      const cleaned = value.toString().replace(/\./g, '').replace(/,/g, '');
-      const number = parseFloat(cleaned);
-      if (isNaN(number)) return value;
-      return number.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-    }
-
-    function renderTable(data) {
-      const tbody = document.querySelector("#data-table tbody");
-      tbody.innerHTML = "";
-      data.forEach(item => {
-        const tr = document.createElement("tr");
-
-        // Warna berdasarkan nama bank
-        let bankClass = "";
-        const bankName = item.bank.toUpperCase();
-        if (bankName.includes("NEGARA INDONESIA")) bankClass = "bank-bni";
-        else if (bankName.includes("RAKYAT INDONESIA")) bankClass = "bank-bri";
-
-        tr.innerHTML = `
-          <td>${item.tanggalTransfer}</td>
-          <td>${item.namaSales}</td>
-          <td class="${bankClass}">${item.bank}</td>
-          <td>${formatNumber(item.jumlahTransfer)}</td>
-          <td>${item.namaToko}</td>
-          <td>${item.status}</td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    function searchData() {
-      const keyword = document.getElementById("searchInput").value.toLowerCase();
-      if (!keyword) return;
-
-      const filtered = allData.filter(item =>
-        item.namaToko.toLowerCase().includes(keyword) ||
-        item.namaSales.toLowerCase().includes(keyword) ||
-        item.jumlahTransfer.toLowerCase().includes(keyword)
-      );
-
-      renderTable(filtered);
-      document.getElementById("backButton").classList.remove("hidden");
-      clearInterval(refreshTimer);
-    }
-
-    function showAll() {
-      renderTable(allData);
-      document.getElementById("searchInput").value = "";
-      document.getElementById("backButton").classList.add("hidden");
-      changeInterval();
-    }
-
-    function changeInterval() {
-      clearInterval(refreshTimer);
-      const interval = document.getElementById("refreshInterval").value;
-      refreshTimer = setInterval(loadData, interval);
-    }
-
-    loadData();
-    changeInterval();
-  </script>
-</body>
-</html>
+          bank: row[3]?.trim() || ''
