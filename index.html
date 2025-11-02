@@ -11,8 +11,7 @@
     }
     h1 {
       text-align: center;
-      color: #007bff;
-      letter-spacing: 1px;
+      color: #333;
     }
     .controls {
       display: flex;
@@ -26,7 +25,7 @@
     }
     input[type="text"] {
       padding: 8px;
-      width: 240px;
+      width: 200px;
       border: 1px solid #ccc;
       border-radius: 4px;
     }
@@ -68,17 +67,13 @@
     .hidden {
       display: none;
     }
-
-    /* Warna khusus untuk kolom Bank */
     .bank-bni {
-      background-color: #ffa50033; /* oranye lembut */
-      font-weight: bold;
-      color: #d46a00;
+      background-color: #ffb84d !important;
+      color: #000;
     }
     .bank-bri {
-      background-color: #007bff33; /* biru lembut */
-      font-weight: bold;
-      color: #004999;
+      background-color: #4da6ff !important;
+      color: #000;
     }
   </style>
 </head>
@@ -86,7 +81,7 @@
   <h1>MONITORING DATA TRANSFER</h1>
   <div class="controls">
     <div>
-      <input type="text" id="searchInput" placeholder="Cari Nama Toko / Sales / Nominal">
+      <input type="text" id="searchInput" placeholder="Cari Nama Toko / Nama Sales / Nominal">
       <button onclick="searchData()">Cari</button>
       <button class="hidden" id="backButton" onclick="showAll()">Kembali</button>
     </div>
@@ -114,7 +109,6 @@
   </table>
 
   <script>
-    // Ganti link CSV dengan hasil Publish to web Google Sheet kamu
     const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSY_v21_qVcE_xUd3gPgxDO7MS1kfuAb2WC1ZBSOE4NhXOHQjqj4YWpqyVGUtQF7xm22q4V_CDeJtxu/pub?output=csv";
 
     let allData = [];
@@ -155,15 +149,88 @@
     }
 
     async function loadData() {
-      const response = await fetch(csvUrl + "&_=" + new Date().getTime());
-      const csvText = await response.text();
-      const rows = parseCSV(csvText);
+      try {
+        const response = await fetch(csvUrl + "&_=" + new Date().getTime());
+        const csvText = await response.text();
+        const rows = parseCSV(csvText);
 
-      allData = [];
-      for (let i = 1; i < rows.length; i++) {
-        const row = rows[i];
-        if (!row[1]) continue; // skip baris kosong
-        allData.push({
-          tanggalTransfer: row[1]?.trim() || '',
-          namaSales: row[2]?.trim() || '',
-          bank: row[3]?.trim() || ''
+        allData = [];
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row[1]) continue;
+          allData.push({
+            tanggalTransfer: row[1] ? row[1].trim() : '',
+            namaSales: row[2] ? row[2].trim() : '',
+            bank: row[3] ? row[3].trim() : '',
+            jumlahTransfer: row[5] ? row[5].trim() : '',
+            namaToko: row[6] ? row[6].trim() : '',
+            status: row[7] ? row[7].trim() : ''
+          });
+        }
+        renderTable(allData);
+      } catch (error) {
+        console.error("Gagal memuat data:", error);
+      }
+    }
+
+    function formatNumber(value) {
+      if (!value) return '';
+      const cleaned = value.toString().replace(/\./g, '').replace(/,/g, '');
+      const number = parseFloat(cleaned);
+      if (isNaN(number)) return value;
+      return number.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    }
+
+    function renderTable(data) {
+      const tbody = document.querySelector("#data-table tbody");
+      tbody.innerHTML = "";
+      data.forEach(item => {
+        const tr = document.createElement("tr");
+
+        let bankClass = "";
+        if (item.bank.toUpperCase().includes("NEGARA INDONESIA")) bankClass = "bank-bni";
+        if (item.bank.toUpperCase().includes("RAKYAT INDONESIA")) bankClass = "bank-bri";
+
+        tr.innerHTML = `
+          <td>${item.tanggalTransfer}</td>
+          <td>${item.namaSales}</td>
+          <td class="${bankClass}">${item.bank}</td>
+          <td>${formatNumber(item.jumlahTransfer)}</td>
+          <td>${item.namaToko}</td>
+          <td>${item.status}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function searchData() {
+      const keyword = document.getElementById("searchInput").value.toLowerCase();
+      if (!keyword) return;
+      const filtered = allData.filter(item =>
+        item.namaToko.toLowerCase().includes(keyword) ||
+        item.namaSales.toLowerCase().includes(keyword) ||
+        item.jumlahTransfer.toLowerCase().includes(keyword)
+      );
+      renderTable(filtered);
+      document.getElementById("backButton").classList.remove("hidden");
+      clearInterval(refreshTimer);
+    }
+
+    function showAll() {
+      renderTable(allData);
+      document.getElementById("searchInput").value = "";
+      document.getElementById("backButton").classList.add("hidden");
+      changeInterval();
+    }
+
+    function changeInterval() {
+      clearInterval(refreshTimer);
+      const interval = document.getElementById("refreshInterval").value;
+      refreshTimer = setInterval(loadData, interval);
+    }
+
+    loadData();
+    changeInterval();
+  </script>
+</body>
+</html>
